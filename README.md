@@ -39,7 +39,7 @@ I think monitoring the actual real data vs the forecast data is probably the bes
 <div style="display: flex; justify-content: space-around;">
 
   <div style="flex-grow: 1;">
-    <h2>Initialization</h2>
+    <h4>Initialization</h4>
     <ul>
       <li>Load data
         <ul>
@@ -60,7 +60,7 @@ I think monitoring the actual real data vs the forecast data is probably the bes
   </div>
 
   <div style="flex-grow: 1;">
-    <h2>Production</h2>
+    <h4>Production</h4>
     <ul>
       <li>Load production model</li>
       <li>Scheduled flow of getting data from coincap every 5 minutes</li>
@@ -71,7 +71,7 @@ I think monitoring the actual real data vs the forecast data is probably the bes
   </div>
 
   <div style="flex-grow: 1;">
-    <h2>Retrain</h2>
+    <h4>Retrain</h4>
     <ul>
       <li>Flush database</li>
       <li>Load data
