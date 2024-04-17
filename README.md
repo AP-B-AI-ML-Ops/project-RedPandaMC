@@ -20,6 +20,7 @@ The api which I aim to utilize offers a REST API with a specific GET request tha
 
 ---
 ### Which model will i use?
+
 For this project, I intend to explore the use of Neural Networks, particularly focusing on an LSTM (Long Short-Term Memory) model, which falls under the category of Recurrent Neural Network (RNN) models. 
 
 #### Why?
