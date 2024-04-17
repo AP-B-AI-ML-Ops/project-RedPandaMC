@@ -18,7 +18,6 @@ The api which I aim to utilize offers a REST API with a specific GET request tha
 
 [API Docs](https://docs.coincap.io/#51da64d7-b83b-4fac-824f-3f06b6c8d944)
 
----
 ### Which model will i use?
 
 For this project, I intend to explore the use of Neural Networks, particularly focusing on an LSTM (Long Short-Term Memory) model, which falls under the category of Recurrent Neural Network (RNN) models. 
@@ -26,15 +25,15 @@ For this project, I intend to explore the use of Neural Networks, particularly f
 #### Why?
 
 I believe this project is the perfect opportunity to get a deeper understanding of LSTM's.
----
+
 ### How do i envision the model retrain pipeline?
 
 When the model is getting too off track of the current market and the quality of the results are declining. I intend to run the same process as the first retrain to replace the old model.
----
+
 ### Monitoring
 
 I think monitoring the actual real data vs the forecast data is probably the best way to monitor the models quality.  
----
+
 ### The task and flows
 <div style="display: flex; justify-content: space-around;">
 
@@ -97,5 +96,3 @@ I think monitoring the actual real data vs the forecast data is probably the bes
   <summary>p.s.</summary>
   The actual flows & tasks may differ but this a good jumping off point.
 </details>
-
-------
