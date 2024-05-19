@@ -64,7 +64,6 @@ def prepare_database(sql_file_path, db_user, db_password, db_host, db_port, db_n
         print(f"An unexpected error occurred: {e}")
 
         
-
 def upload_data_to_database(db_user,db_password,db_host,db_port,db_name):
     engine = create_engine(f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
     

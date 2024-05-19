@@ -20,6 +20,8 @@ services:
         target: /workspace
         bind:
           propagation: shared
+    networks:
+      - mynetwork
 
   postgres:
     image: postgres:latest
@@ -29,3 +31,9 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
