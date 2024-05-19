@@ -1,4 +1,6 @@
 name: mlops_project_env
+channels:
+  - defaults
 dependencies:
   - python=3.9
   - psycopg2
