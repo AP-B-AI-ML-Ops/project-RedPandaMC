@@ -3,11 +3,21 @@ FROM continuumio/miniconda3
 # Set the working directory
 WORKDIR /workspace
 
+# Create a non-root user named vscode
+RUN useradd -ms /bin/bash vscode
+
+# Change to the vscode user
+USER vscode
+
 # Copy the environment.yml to the container
 COPY environment.yml /workspace/
 
-# Create the environment and activate it
-RUN conda env create -f environment.yml && conda clean -a
+# Create the environment and clean up
+RUN conda env create -f environment.yml \
+    && conda clean -a
 
 # Ensure the environment is activated when the container starts
-CMD ["conda", "run", "--no-capture-output", "-n", "mlops_project_env", "/bin/bash"]
+RUN echo "source activate mlops_project_env" > ~/.bashrc
+
+# Set the default command to bash
+CMD ["/bin/bash"]

@@ -1,3 +1,4 @@
 *.txt
 *.env
 .idea
+test.ipynb
