@@ -1,0 +1,30 @@
+version: '3'
+services:
+  python:
+    image: continuumio/miniconda3
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=mydatabase
+    command: /bin/bash -c "while sleep 1000; do :; done"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

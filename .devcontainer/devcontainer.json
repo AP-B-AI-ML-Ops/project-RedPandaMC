@@ -1,0 +1,17 @@
+{
+  "name": "Python Dev Container with PostgreSQL",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "python",
+  "workspaceFolder": "/workspace",
+  "extensions": [
+    "ms-python.python",
+    "ms-azuretools.vscode-docker"
+  ],
+  "settings": {
+    "python.pythonPath": "/opt/conda/bin/python"
+  },
+  "postCreateCommand": "conda env create -f environment.yml && conda activate myenv",
+  "runServices": ["postgres"],
+  "shutdownAction": "stopCompose",
+  "remoteUser": "vscode"
+}

@@ -1,0 +1,13 @@
+name: mlops_project_env
+dependencies:
+  - python=3.9
+  - psycopg2
+  - numpy
+  - pandas
+  - scikit-learn
+  - jupyter
+  - notebook
+  - ipykernel
+  - matplotlib
+  - seaborn
+  - requests
