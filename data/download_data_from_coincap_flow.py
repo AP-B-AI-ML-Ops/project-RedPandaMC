@@ -1,33 +1,36 @@
 """This module provides a function for fetching historical data of a given cryptocurrency from the CoinCap API."""
-
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, Dict, Any
 
-def get_crypto_data_flow(interval: str = "m15", crypto_coin: str = "bitcoin", amount_weeks_past:int = 5) -> Optional[Dict[str, Any]]:
+def get_crypto_data_flow(interval: str = "m15", crypto_coin: str = "bitcoin", start_date: str = "01/01/2021", end_date: str = "01/02/2021") -> Optional[Dict[str, Any]]:
     """
     Fetches historical data for a given cryptocurrency from the CoinCap API.
 
     Args:
         interval (str, optional): The time interval for data points. Defaults to 'm15' (15 minutes).
         crypto_coin (str, optional): The cryptocurrency symbol. Defaults to 'bitcoin'.
+        start_date (str, optional): The start date for data retrieval in 'dd/mm/yyyy' format. Defaults to '01/01/2021'.
+        end_date (str, optional): The end date for data retrieval in 'dd/mm/yyyy' format. Defaults to '01/02/2021'.
 
     Returns:
         tuple or None: A tuple containing headers and historical data if successful, otherwise None.
     """
-    def get_data(url:str,params:dict,headers:dict,data:dict) -> requests.Response:
+    def get_data(url: str, params: dict, headers: dict, data: dict) -> requests.Response:
         """Send a GET request to the specified URL with provided parameters, headers, and data."""
         resp: requests.Response = requests.get(url, params=params, headers=headers, data=data)
         return resp
 
-    url: str = "https://api.coincap.io/v2/assets/%s/history?" % crypto_coin
+    # Convert the start_date and end_date from 'dd/mm/yyyy' to timestamps
+    start_timestamp: int = int(datetime.strptime(start_date, "%d/%m/%Y").timestamp()) * 1000
+    end_timestamp: int = int(datetime.strptime(end_date, "%d/%m/%Y").timestamp()) * 1000
+
+    url: str = f"https://api.coincap.io/v2/assets/{crypto_coin}/history?"
     
-    end_time: int = int(datetime.now().timestamp()) * 1000
-    start_time: int = int((datetime.now() - timedelta(weeks=amount_weeks_past)).timestamp()) * 1000
     params: dict = {
         "interval": interval,
-        "start": start_time,
-        "end": end_time
+        "start": start_timestamp,
+        "end": end_timestamp
     }
 
     headers: dict = {}

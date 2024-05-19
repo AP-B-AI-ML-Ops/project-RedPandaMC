@@ -30,3 +30,4 @@ def clean_data(df):
 
 def upload_data_to_db(db_user,db_password,db_port,db_name):
     engine = create_engine(f"postgresql://{db_user}:{db_password}@localhost:{db_port}/{db_name}")
+    
