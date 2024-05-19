@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-def get_bitcoin_data_flow(interval: str, crypto_coin: str = 'bitcoin') -> Optional[Dict[str, Any]]:
+def get_crypto_data_flow(interval: str = "m15", crypto_coin: str = "dogecoin") -> Optional[Dict[str, Any]]:
     """
     Fetches historical data for a given cryptocurrency.
 
@@ -15,22 +15,28 @@ def get_bitcoin_data_flow(interval: str, crypto_coin: str = 'bitcoin') -> Option
     Returns:
         dict or None: A dictionary containing historical data if successful, otherwise None.
     """
-    url : str = "https://api.coincap.io/v2/assets/%s/history" % crypto_coin
+    def get_data(url:str,params:dict,headers:dict,data:dict):
+        resp : requests.Response = requests.get(url, params=params, headers=headers,data=data)
+        return resp
+
+    url : str = "https://api.coincap.io/v2/assets/%s/history?" % crypto_coin
     
     end_time : int = int(datetime.now().timestamp()) * 1000
     start_time : int = int((datetime.now() - timedelta(weeks=6)).timestamp()) * 1000
-    
     params : dict = {
         "interval": interval,
         "start": start_time,
         "end": end_time
     }
-    
-    response : requests.Response = requests.get(url, params=params)
+
+    headers : dict = {}
+
+    payload : dict = {}
+
+    response : requests.Response = get_data(url,params,headers,payload)
     
     if response.status_code == 200:
-        data : Any = response.json()
-        return data
+        return response.headers, response.text
     else:
         print("Failed to fetch data:", response.text)
-        return None
+        return response.headers, response.text

@@ -5,7 +5,8 @@
   "workspaceFolder": "/workspace",
   "extensions": [
     "ms-python.python",
-    "ms-azuretools.vscode-docker"
+    "ms-azuretools.vscode-docker",
+    "ms-toolsai.jupyter"
   ],
   "settings": {
     "python.pythonPath": "/opt/conda/bin/python"

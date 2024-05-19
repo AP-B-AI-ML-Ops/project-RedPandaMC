@@ -25,7 +25,7 @@ services:
     image: postgres:latest
     container_name: dev_postgres
     env_file:
-      - .env
+      - ../.env
     ports:
       - "5432:5432"
     restart: unless-stopped
