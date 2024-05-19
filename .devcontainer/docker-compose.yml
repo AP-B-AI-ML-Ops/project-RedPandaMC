@@ -13,13 +13,13 @@ services:
       postgres:
         condition: service_started
     environment:
-        CONDA_DEFAULT_ENV: mlops_project_env
+      CONDA_DEFAULT_ENV: mlops_project_env
     volumes:
       - type: bind
         source: /workspaces/project-RedPandaMC/.devcontainer
         target: /workspace
         bind:
-          create_host_path: true
+          propagation: shared
 
   postgres:
     image: postgres:latest

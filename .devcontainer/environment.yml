@@ -13,4 +13,4 @@ dependencies:
   - matplotlib
   - seaborn
   - requests
-  - dotenv
+  - python-dotenv
