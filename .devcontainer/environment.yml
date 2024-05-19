@@ -3,7 +3,7 @@ channels:
   - defaults
 dependencies:
   - python=3.11
-  - psycopg2
+  - sqlalchemy
   - numpy
   - pandas
   - scikit-learn
@@ -13,3 +13,4 @@ dependencies:
   - matplotlib
   - seaborn
   - requests
+  - dotenv

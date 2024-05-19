@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
-def get_crypto_data_flow(interval: str = "m15", crypto_coin: str = "bitcoin") -> Optional[Dict[str, Any]]:
+def get_crypto_data_flow(interval: str = "m15", crypto_coin: str = "bitcoin", amount_weeks_past:int = 5) -> Optional[Dict[str, Any]]:
     """
     Fetches historical data for a given cryptocurrency from the CoinCap API.
 
@@ -23,7 +23,7 @@ def get_crypto_data_flow(interval: str = "m15", crypto_coin: str = "bitcoin") ->
     url: str = "https://api.coincap.io/v2/assets/%s/history?" % crypto_coin
     
     end_time: int = int(datetime.now().timestamp()) * 1000
-    start_time: int = int((datetime.now() - timedelta(weeks=6)).timestamp()) * 1000
+    start_time: int = int((datetime.now() - timedelta(weeks=amount_weeks_past)).timestamp()) * 1000
     params: dict = {
         "interval": interval,
         "start": start_time,
