@@ -1,11 +1,22 @@
 """This document contains a flow to execute a given sql file"""
+
+from prefect import flow
 import os
 from psycopg2 import OperationalError, connect, Error
 
+
+@flow(
+    name="Prepare database",
+    description="Prepare the database by executing SQL statements from a file.",
+)
 def prepare_database(
-        sql_file_path: str, db_user: str, db_password: str, 
-        db_host: str, db_port: int, db_name: str
-    ) -> None:
+    sql_file_path: str,
+    db_user: str,
+    db_password: str,
+    db_host: str,
+    db_port: int,
+    db_name: str,
+) -> None:
     """
     Prepare the database by executing SQL statements from a file.
 
@@ -21,7 +32,7 @@ def prepare_database(
         if not os.path.exists(sql_file_path):
             raise FileNotFoundError(f"SQL file '{sql_file_path}' does not exist.")
 
-        with open(sql_file_path, encoding='utf-8', mode='r') as sql_f:
+        with open(sql_file_path, encoding="utf-8", mode="r") as sql_f:
             sql_statements = sql_f.read()
 
         conn = connect(
@@ -29,10 +40,10 @@ def prepare_database(
             user=db_user,
             password=db_password,
             host=db_host,
-            port=db_port
+            port=db_port,
         )
         cursor = conn.cursor()
-        
+
         try:
             cursor.execute(sql_statements)
             conn.commit()
