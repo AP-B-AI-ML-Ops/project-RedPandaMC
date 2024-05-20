@@ -17,7 +17,7 @@ services:
     volumes:
       - type: bind
         source: /workspaces/project-RedPandaMC/.devcontainer
-        target: /workspace
+        target: /workspaces
         bind:
           propagation: shared
     networks:

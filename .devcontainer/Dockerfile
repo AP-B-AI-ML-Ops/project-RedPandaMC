@@ -6,6 +6,12 @@ WORKDIR /workspace
 # Create a non-root user named vscode
 RUN useradd -ms /bin/bash vscode
 
+# Switch to the root user to install tree
+USER root
+
+# Install tree
+RUN apt-get update && apt-get install -y tree
+
 # Change to the vscode user
 USER vscode
 
