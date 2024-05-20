@@ -14,7 +14,6 @@
   "settings": {
     "python.pythonPath": "/opt/conda/bin/python"
   },
-  "postCreateCommand": "conda env create -f environment.yml && conda activate mlops_project_env",
   "runServices": ["postgres"],
   "shutdownAction": "stopCompose",
   "remoteUser": "vscode"

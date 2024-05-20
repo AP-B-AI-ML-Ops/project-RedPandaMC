@@ -16,12 +16,11 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
     pd.DataFrame: The cleaned DataFrame with renamed columns.
     """
-    df = df.drop(columns=["time"])
+    df = df.drop(columns=["time","circulatingSupply"])
     df = df.rename(
         columns={
             "date": "Date",
-            "priceUsd": "PriceUSD",
-            "circulatingSupply": "CirculatingSupply",
+            "priceUsd": "PriceUSD"
         }
     )
     return df

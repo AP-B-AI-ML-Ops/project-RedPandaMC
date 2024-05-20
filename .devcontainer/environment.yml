@@ -3,16 +3,21 @@ channels:
   - defaults
 dependencies:
   - python=3.11
+  - black
+  - ipykernel
+  - jupyter
+  - keras
+  - matplotlib
+  - mlflow
+  - notebook
   - numpy
   - pandas
-  - scikit-learn
-  - jupyter
-  - notebook
-  - ipykernel
-  - matplotlib
-  - seaborn
-  - requests
-  - python-dotenv
   - psycopg2
+  - python-dotenv
+  - requests
+  - seaborn
   - sqlalchemy
-  - black
+  - tensorflow
+  - pip
+  - pip:
+    - evidently

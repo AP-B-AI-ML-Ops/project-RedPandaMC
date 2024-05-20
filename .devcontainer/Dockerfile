@@ -1,7 +1,7 @@
 FROM continuumio/miniconda3
 
 # Set the working directory
-WORKDIR /workspace
+WORKDIR /workspaces
 
 # Create a non-root user named vscode
 RUN useradd -ms /bin/bash vscode
@@ -12,15 +12,11 @@ USER root
 # Install tree
 RUN apt-get update && apt-get install -y tree
 
-RUN git config --global user.name "RedPanda"
-
-RUN git config --global user.email "RedPandaMC@gmail.com"
-
 # Change to the vscode user
 USER vscode
 
 # Copy the environment.yml to the container
-COPY environment.yml /workspace/
+COPY environment.yml /workspaces/
 
 # Create the environment and clean up
 RUN conda env create -f environment.yml \

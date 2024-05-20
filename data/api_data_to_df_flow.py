@@ -55,7 +55,7 @@ def convert_json_to_df(json_data: List[Dict[str, Any]]) -> pd.DataFrame:
     name="Convert API data to pandas dataframe",
     description="This function takes a JSON string containing CoinCap API data and converts it into a pandas DataFrame.",
 )
-def api_data_to_df(api_data_string: str):
+def api_data_to_df(api_data_string: str) -> pd.DataFrame:
     """
     Convert API data from CoinCap in JSON format to a pandas DataFrame.
 
@@ -79,3 +79,4 @@ def api_data_to_df(api_data_string: str):
     """
     json_data = convert_data_to_json(api_data_string)
     dataframe = convert_json_to_df(json_data)
+    return dataframe
