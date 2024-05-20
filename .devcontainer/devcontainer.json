@@ -7,7 +7,9 @@
     "ms-python.python",
     "ms-azuretools.vscode-docker",
     "ms-toolsai.jupyter",
-    "mhutchie.git-graph"
+    "mhutchie.git-graph",
+    "mikoz.black-py",
+    "ms-python.black-formatter"
   ],
   "settings": {
     "python.pythonPath": "/opt/conda/bin/python"
