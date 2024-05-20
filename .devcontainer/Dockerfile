@@ -12,6 +12,10 @@ USER root
 # Install tree
 RUN apt-get update && apt-get install -y tree
 
+RUN git config --global user.name "RedPanda"
+
+RUN git config --global user.email "RedPandaMC@gmail.com"
+
 # Change to the vscode user
 USER vscode
 
