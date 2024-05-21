@@ -15,6 +15,7 @@
     "python.pythonPath": "/opt/conda/bin/python"
   },
   "runServices": ["postgres"],
+  "postCreateCommand": "./gitsetup.sh",
   "shutdownAction": "stopCompose",
   "remoteUser": "vscode"
 }
