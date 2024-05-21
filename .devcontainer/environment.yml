@@ -21,3 +21,5 @@ dependencies:
   - pip
   - pip:
     - evidently
+    - prefect
+    - optuna
