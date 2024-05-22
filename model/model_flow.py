@@ -1,20 +1,30 @@
-from keras.layers import LSTM, Dense, Dropout
-from keras.models import Sequential
-from keras.optimizers import Adam
-from mlflow.models.signature import infer_signature
-from mlflow.tracking import MlflowClient
-from optuna.pruners import WilcoxonPruner
-from optuna.samplers import TPESampler
-from sqlalchemy import create_engine
-import mlflow
-import mlflow.keras
-import numpy as np
-import optuna
+"""
+Everything model related happens in this doc
+"""
+
+from typing import Tuple
 import pandas as pd
+import optuna
+import numpy as np
+import mlflow.keras
+import mlflow
+from sqlalchemy import create_engine
+from prefect import task, flow
+from optuna.samplers import TPESampler
+from optuna.pruners import WilcoxonPruner
+from mlflow.tracking import MlflowClient
+from mlflow.models.signature import infer_signature
+from keras.optimizers import Adam
+from keras.models import Sequential
+from keras.layers import LSTM, Dense, Dropout
 
 SQLITE_URL = "sqlite:///optuna_lstm.db"
 
 
+@task(
+    name="Get Data From Database",
+    description="Fetch data from a database table and return it as a pandas DataFrame.",
+)
 def get_data_from_database(
     schema: str,
     table_name: str,
@@ -47,7 +57,20 @@ def get_data_from_database(
     return df
 
 
-def create_sequences(data, seq_length):
+def create_sequences(
+    data: np.ndarray, seq_length: int
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Create sequences from data for time series forecasting.
+
+    Args:
+        data (np.ndarray): Input data array.
+        seq_length (int): Length of each sequence.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Tuple containing the
+        sequences (xs) and corresponding targets (ys).
+    """
     xs, ys = [], []
     for i in range(len(data) - seq_length):
         x = data[i : (i + seq_length)]
@@ -57,8 +80,31 @@ def create_sequences(data, seq_length):
     return np.array(xs), np.array(ys)
 
 
-def train_model(train_set, validation_set, test_set, seq_length: int = 12):
+@flow(
+    name="Train, HPO and Log Model",
+    description="Train a model with hyperparameter optimization and log the model using MLflow.",
+)
+def train_model(
+    train_set: pd.DataFrame,
+    validation_set: pd.DataFrame,
+    test_set: pd.DataFrame,
+    train_date_range: Tuple[str, str],
+    val_date_range: Tuple[str, str],
+    test_date_range: Tuple[str, str],
+    seq_length: int = 12,
+) -> None:
+    """
+    Train a model with hyperparameter optimization and log the model using MLflow.
 
+    Args:
+        train_set (pd.DataFrame): Training dataset.
+        validation_set (pd.DataFrame): Validation dataset.
+        test_set (pd.DataFrame): Test dataset.
+        train_date_range (Tuple[str, str]): Date range for the training set.
+        val_date_range (Tuple[str, str]): Date range for the validation set.
+        test_date_range (Tuple[str, str]): Date range for the test set.
+        seq_length (int, optional): Length of each sequence. Defaults to 12.
+    """
     train = train_set["PriceUSD"].values
     validation = validation_set["PriceUSD"].values
     test = test_set["PriceUSD"].values
@@ -67,7 +113,18 @@ def train_model(train_set, validation_set, test_set, seq_length: int = 12):
     x_val, y_val = create_sequences(validation, seq_length)
     x_tst, y_tst = create_sequences(test, seq_length)
 
-    def objective(trial):
+    # Making this a task would cause too much clutter and lag in
+    # prefect I know from experience
+    def objective(trial: optuna.trial.Trial) -> Tuple[float, float]:
+        """
+        Objective function for Optuna hyperparameter optimization.
+
+        Args:
+            trial (optuna.trial.Trial): A trial object that suggests hyperparameters.
+
+        Returns:
+            Tuple[float, float]: Loss and accuracy on the validation set.
+        """
         n_units_1 = trial.suggest_int("n_units_1", 50, 200)
         n_units_2 = trial.suggest_int("n_units_2", 50, 200)
         dropout_rate_1 = trial.suggest_float("dropout_rate_1", 0.2, 0.5)
@@ -105,7 +162,6 @@ def train_model(train_set, validation_set, test_set, seq_length: int = 12):
         )
 
         loss, accuracy = model.evaluate(x_val, y_val, verbose=0)
-
         return loss, accuracy
 
     sampler = TPESampler(seed=42, n_startup_trials=25)
@@ -153,6 +209,13 @@ def train_model(train_set, validation_set, test_set, seq_length: int = 12):
             final_model, "model", signature=infer_signature(x_trn, y_trn)
         )
         mlflow.log_params(best_params)
+        mlflow.log_params(
+            {
+                "training_set_date_range": train_date_range,
+                "validation_set_date_range": val_date_range,
+                "test_set_date_range": test_date_range,
+            }
+        )
         model_uri = f"runs:/{run.info.run_id}/model"
         client = MlflowClient()
         client.create_registered_model("CryptoPredictor")

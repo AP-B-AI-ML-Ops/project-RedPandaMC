@@ -1,8 +1,10 @@
-"""This document contains a flow to execute a given sql file"""
+"""
+This document contains a flow to execute a given sql file
+"""
 
-from prefect import flow
 import os
-from psycopg2 import OperationalError, connect, Error
+from prefect import flow
+from psycopg2 import connect, Error
 
 
 @flow(

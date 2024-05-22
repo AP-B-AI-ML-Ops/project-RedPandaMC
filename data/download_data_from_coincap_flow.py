@@ -1,9 +1,12 @@
-"""This module provides a function for fetching historical data of a given cryptocurrency from the CoinCap API."""
+"""
+This module provides a function for fetching historical data of a given 
+cryptocurrency from the CoinCap API.
+"""
 
-from prefect import flow, task
-import requests
 from datetime import datetime
 from typing import Optional, Dict, Any
+from prefect import flow, task
+import requests
 
 
 @flow(
@@ -22,24 +25,29 @@ def get_crypto_data_flow(
     Fetches historical data for a given cryptocurrency from the CoinCap API.
 
     Args:
-        interval (str, optional): The time interval for data points. Defaults to 'm15' (15 minutes).
+        interval (str, optional): The time interval for data points.
+        Defaults to 'm15' (15 minutes).
         crypto_coin (str, optional): The cryptocurrency symbol. Defaults to 'bitcoin'.
-        start_date (str, optional): The start date for data retrieval in 'dd/mm/yyyy' format. Defaults to '01/01/2021'.
-        end_date (str, optional): The end date for data retrieval in 'dd/mm/yyyy' format. Defaults to '01/02/2021'.
+        start_date (str, optional): The start date for data retrieval in
+        'dd/mm/yyyy' format. Defaults to '01/01/2021'.
+        end_date (str, optional): The end date for data retrieval in
+        'dd/mm/yyyy' format. Defaults to '01/02/2021'.
 
     Returns:
         tuple or None: A tuple containing headers and historical data if successful, otherwise None.
     """
 
     @task(
-        description="Send a GET request to the specified URL with provided parameters, headers, and data."
+        name="Get Data From API",
+        description="Send a GET request to the specified URL with \
+        provided parameters, headers, and data.",
     )
     def get_data(
         url: str, params: dict, headers: dict, data: dict
     ) -> requests.Response:
         """Send a GET request to the specified URL with provided parameters, headers, and data."""
         resp: requests.Response = requests.get(
-            url, params=params, headers=headers, data=data
+            url, params=params, headers=headers, data=data, timeout=10
         )
         return resp
 

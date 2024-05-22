@@ -1,11 +1,17 @@
+"""
+In this document you'll find everything 
+needed to use the model to forecast data based on recent data
+"""
+from typing import Any, List, Optional
 from datetime import datetime, timedelta
 from mlflow.tracking import MlflowClient
 from sqlalchemy import create_engine
-from typing import Any, List, Optional
 import mlflow
-import numpy as np
 import pandas as pd
 import psycopg2
+
+
+
 
 INTERVAL_MAP = {
     "m1": timedelta(minutes=1),
@@ -96,9 +102,11 @@ def insert_predicted_data(
 
     Parameters:
     cursor (psycopg2.extensions.cursor): The database cursor.
-    future_dates (List[datetime]): The future dates to insert into the prediction table.
+    future_dates (List[datetime]): The future dates to insert 
+    into the prediction table.
     """
-    insert_query = 'INSERT INTO prediction.predicted_data ("PriceUSDPredicted", "FutureDate") VALUES (%s, %s)'
+    insert_query = 'INSERT INTO prediction.predicted_data \
+    ("PriceUSDPredicted", "FutureDate") VALUES (%s, %s)'
     for date in future_dates:
         cursor.execute(insert_query, (None, date))
 
