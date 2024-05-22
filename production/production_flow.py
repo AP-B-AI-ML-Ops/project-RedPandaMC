@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from mlflow.tracking import MlflowClient
 from sqlalchemy import create_engine
+from typing import Any, List, Optional
 import mlflow
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ INTERVAL_MAP = {
     "h12": timedelta(hours=12),
     "d1": timedelta(days=1),
 }
+
 
 def get_data_from_database(
     schema: str,
@@ -50,6 +52,87 @@ def get_data_from_database(
     return df
 
 
+def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
+    """
+    Fetch the last date from the recent data table.
+
+    Parameters:
+    cursor (psycopg2.extensions.cursor): The database cursor.
+
+    Returns:
+    Optional[datetime]: The last date in the recent data table.
+    """
+    cursor.execute('SELECT MAX("Date") FROM recent.recent_data')
+    return cursor.fetchone()[0]
+
+
+def generate_future_dates(
+    last_date: datetime, interval: str, num_values: int
+) -> List[datetime]:
+    """
+    Generate future dates based on the given interval and number of values.
+
+    Parameters:
+    last_date (datetime): The last date from which to start generating future dates.
+    interval (str): The interval for generating dates.
+    num_values (int): The number of future dates to generate.
+
+    Returns:
+    List[datetime]: A list of future dates.
+    """
+    future_dates = []
+    current_date = last_date
+    for _ in range(num_values):
+        current_date += INTERVAL_MAP[interval]
+        future_dates.append(current_date)
+    return future_dates
+
+
+def insert_predicted_data(
+    cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
+) -> None:
+    """
+    Insert predicted data into the prediction table.
+
+    Parameters:
+    cursor (psycopg2.extensions.cursor): The database cursor.
+    future_dates (List[datetime]): The future dates to insert into the prediction table.
+    """
+    insert_query = 'INSERT INTO prediction.predicted_data ("PriceUSDPredicted", "FutureDate") VALUES (%s, %s)'
+    for date in future_dates:
+        cursor.execute(insert_query, (None, date))
+
+
+def upload_prediction_to_database(
+    df: pd.DataFrame,
+    db_user: str,
+    db_password: str,
+    db_host: str,
+    db_port: int,
+    db_name: str,
+) -> None:
+    """
+    Upload a DataFrame to a specified schema in a PostgreSQL database.
+
+    Parameters:
+    df (pd.DataFrame): The DataFrame to upload.
+    db_user (str): Database username.
+    db_password (str): Database password.
+    db_host (str): Database host.
+    db_port (int): Database port.
+    db_name (str): Database name.
+    """
+    engine = create_engine(
+        f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+    )
+    df.to_sql(
+        name="predicted_data",
+        con=engine,
+        schema="prediction",
+        if_exists="replace",
+        index=False,
+    )
+
 
 def prepare_future_prices_to_database(
     num_values: int,
@@ -59,7 +142,19 @@ def prepare_future_prices_to_database(
     db_host: str,
     db_port: int,
     db_name: str,
-):
+) -> None:
+    """
+    Prepare future prices and insert them into the database.
+
+    Parameters:
+    num_values (int): The number of future values to generate.
+    interval (str): The interval for generating future dates.
+    db_user (str): The database user.
+    db_password (str): The database password.
+    db_host (str): The database host.
+    db_port (int): The database port.
+    db_name (str): The database name.
+    """
     db_params = {
         "dbname": db_name,
         "user": db_user,
@@ -68,23 +163,8 @@ def prepare_future_prices_to_database(
         "port": db_port,
     }
 
-    def get_last_date(cursor):
-        cursor.execute('SELECT MAX("Date") FROM recent.recent_data')
-        return cursor.fetchone()[0]
-
-    def generate_future_dates(last_date, interval, num_values):
-        future_dates = []
-        current_date = last_date
-        for _ in range(num_values):
-            current_date += INTERVAL_MAP[interval]
-            future_dates.append(current_date)
-        return future_dates
-
-    def insert_predicted_data(cursor, future_dates):
-        insert_query = 'INSERT INTO prediction.predicted_data ("PriceUSDPredicted", "FutureDate") VALUES (%s, %s)'
-        for date in future_dates:
-            cursor.execute(insert_query, (0, date))
-
+    conn = None
+    cursor = None
     try:
         conn = psycopg2.connect(**db_params)
         cursor = conn.cursor()
@@ -103,36 +183,84 @@ def prepare_future_prices_to_database(
             conn.close()
 
 
-def get_production_model():
+def get_production_model() -> Any:
+    """
+    Fetch the production model from MLflow.
+
+    Returns:
+    Any: The production model.
+    """
     client = MlflowClient()
     model_name = "CryptoPredictor"
     alias = "Production"
 
     model_version = client.get_model_version_by_alias(name=model_name, alias=alias)
-
     model_uri = f"models:/{model_name}/{model_version.version}"
     model = mlflow.pyfunc.load_model(model_uri)
 
     return model
 
 
-def predict_future_prices(model, seq_length:int=12):
-    # this is fucked create sequences needs to have a df that gets updated 
-    # all the time everytime you do a prediction
-    def create_sequences(data, seq_length):
-        xs, ys = [], []
-        for i in range(len(data) - seq_length):
-            x = data[i : (i + seq_length)]
-            y = data[i + seq_length]
-            xs.append(x)
-            ys.append(y)
-        return np.array(xs), np.array(ys)
-    
-    # TODO: change this whole function
-    
+def predict_future_prices(
+    model: Any,
+    seq_length: int,
+    db_user: str,
+    db_password: str,
+    db_host: str,
+    db_port: int,
+    db_name: str,
+) -> None:
+    """
+    Predict future prices using the given model and upload the predictions to the database.
 
+    Parameters:
+    model (Any): The predictive model.
+    seq_length (int): The sequence length for the prediction model.
+    db_user (str): The database user.
+    db_password (str): The database password.
+    db_host (str): The database host.
+    db_port (int): The database port.
+    db_name (str): The database name.
+    """
+    recent_df = get_data_from_database(
+        "recent", "recent_data", db_user, db_password, db_host, db_port, db_name
+    )
 
+    last_date = recent_df.iloc[-1]["Date"]
 
+    while True:
+        pred_df = get_data_from_database(
+            "prediction",
+            "predicted_data",
+            db_user,
+            db_password,
+            db_host,
+            db_port,
+            db_name,
+        )
 
-def write_future_prices_to_database():
-    pass
+        pred_df.columns = ["PriceUSD", "Date"]
+
+        combined_data = pd.concat([recent_df, pred_df], ignore_index=True)
+
+        if not combined_data["PriceUSD"].isna().any():
+            break
+
+        first_nan_index = combined_data["PriceUSD"].isna().idxmax()
+        start_index_sequence = first_nan_index - seq_length
+
+        if start_index_sequence < 0:
+            raise ValueError("Sequence length is too long for the available data")
+
+        sequence = combined_data.iloc[start_index_sequence:first_nan_index]["PriceUSD"]
+
+        prediction = model.predict(sequence.values.reshape(1, -1))
+
+        combined_data.at[first_nan_index, "PriceUSD"] = prediction[0]
+
+        updated_pred_df = combined_data[combined_data["Date"] > last_date]
+        updated_pred_df.columns = ["PriceUSDPredicted", "FutureDate"]
+
+        upload_prediction_to_database(
+            updated_pred_df, db_user, db_password, db_host, db_port, db_name
+        )
