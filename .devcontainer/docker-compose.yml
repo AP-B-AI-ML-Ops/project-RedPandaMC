@@ -22,6 +22,10 @@ services:
           propagation: shared
     networks:
       - mynetwork
+    ports:
+      - "4200:4200"
+      - "5000:5000"
+      - "8080:8080"
 
   postgres:
     image: postgres:latest

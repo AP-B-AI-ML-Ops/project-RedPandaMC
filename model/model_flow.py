@@ -18,8 +18,8 @@ from keras.optimizers import Adam
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
 
-SQLITE_URL = "sqlite:///optuna_lstm.db"
-
+OPTUNA_URI = "sqlite:///optuna_lstm.db"
+MLFLOW_URI = "sqlite:///mlflow_db"
 
 @task(
     name="Get Data From Database",
@@ -88,9 +88,9 @@ def train_model(
     train_set: pd.DataFrame,
     validation_set: pd.DataFrame,
     test_set: pd.DataFrame,
-    train_date_range: Tuple[str, str],
-    val_date_range: Tuple[str, str],
-    test_date_range: Tuple[str, str],
+    train_date_range: dict[str, str],
+    val_date_range: dict[str, str],
+    test_date_range: dict[str, str],
     seq_length: int = 12,
 ) -> None:
     """
@@ -168,7 +168,7 @@ def train_model(
     pruner = WilcoxonPruner(p_threshold=0.12, n_startup_steps=25)
     study = optuna.create_study(
         directions=["minimize", "maximize"],
-        storage=SQLITE_URL,
+        storage=OPTUNA_URI,
         load_if_exists=True,
         sampler=sampler,
         pruner=pruner,
@@ -204,6 +204,8 @@ def train_model(
         validation_data=(x_tst, y_tst),
     )
 
+    mlflow.set_tracking_uri(MLFLOW_URI)
+
     with mlflow.start_run() as run:
         mlflow.keras.log_model(
             final_model, "model", signature=infer_signature(x_trn, y_trn)
@@ -225,3 +227,57 @@ def train_model(
         client.set_registered_model_alias(
             name="CryptoPredictor", alias="Production", version=model_version.version
         )
+
+
+@flow("Main Flow - Model Training")
+def model_flow(
+    sequence_length,
+    train_range,
+    valid_range,
+    testing_range,
+    pstgrs_user: str,
+    pstgrs_password: str,
+    pstgrs_host: str,
+    pstgrs_port: int,
+    pstgrs_name: str,
+):
+    """Main Flow - Model Training"""
+    trn_set = get_data_from_database(
+        schema="training",
+        table_name="training_data",
+        db_user=pstgrs_user,
+        db_password=pstgrs_password,
+        db_name=pstgrs_name,
+        db_host=pstgrs_host,
+        db_port=pstgrs_port,
+    )
+
+    val_set = get_data_from_database(
+        schema="validation",
+        table_name="validation_data",
+        db_user=pstgrs_user,
+        db_password=pstgrs_password,
+        db_name=pstgrs_name,
+        db_host=pstgrs_host,
+        db_port=pstgrs_port,
+    )
+
+    tst_set = get_data_from_database(
+        schema="testing",
+        table_name="testing_data",
+        db_user=pstgrs_user,
+        db_password=pstgrs_password,
+        db_name=pstgrs_name,
+        db_host=pstgrs_host,
+        db_port=pstgrs_port,
+    )
+
+    train_model(
+        train_set=trn_set,
+        validation_set=val_set,
+        test_set=tst_set,
+        train_date_range=train_range,
+        val_date_range=valid_range,
+        test_date_range=testing_range,
+        seq_length=sequence_length,
+    )

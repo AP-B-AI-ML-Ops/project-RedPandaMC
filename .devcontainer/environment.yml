@@ -24,3 +24,4 @@ dependencies:
     - prefect
     - optuna
     - pyyaml
+    - optuna-dashboard
