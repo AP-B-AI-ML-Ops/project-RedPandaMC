@@ -61,8 +61,8 @@ def data_gathering_flow(
         cln_trn_coin_df = clean_data(trn_coin_df)
         upload_data_to_database(
             df=cln_trn_coin_df,
-            schema="training",
-            table_name="training_data",
+            schema="mlops",
+            table_name="trainingdata",
             db_user=usr,
             db_password=pwd,
             db_name=db,
@@ -90,8 +90,8 @@ def data_gathering_flow(
         cln_trn_coin_df = clean_data(trn_coin_df)
         upload_data_to_database(
             df=cln_trn_coin_df,
-            schema="validation",
-            table_name="validation_data",
+            schema="mlops",
+            table_name="validationdata",
             db_user=usr,
             db_password=pwd,
             db_name=db,
@@ -119,8 +119,8 @@ def data_gathering_flow(
         cln_trn_coin_df = clean_data(trn_coin_df)
         upload_data_to_database(
             df=cln_trn_coin_df,
-            schema="testing",
-            table_name="testing_data",
+            schema="mlops",
+            table_name="testingdata",
             db_user=usr,
             db_password=pwd,
             db_name=db,
@@ -148,8 +148,8 @@ def data_gathering_flow(
         cln_trn_coin_df = clean_data(trn_coin_df)
         upload_data_to_database(
             df=cln_trn_coin_df,
-            schema="testing",
-            table_name="testing_data",
+            schema="mlops",
+            table_name="recentdata",
             db_user=usr,
             db_password=pwd,
             db_name=db,
@@ -158,7 +158,7 @@ def data_gathering_flow(
         )
 
     prepare_database(
-        sql_file_path="sql_scripts/create_schemas",
+        sql_file_path="sql_scripts/create_schemas.sql",
         db_host=host,
         db_user=user,
         db_password=pasw,

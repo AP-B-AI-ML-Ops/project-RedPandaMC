@@ -4,3 +4,5 @@ test.ipynb
 *.pyc
 *.db
 __pycache__/*
+postgres
+*prefect*

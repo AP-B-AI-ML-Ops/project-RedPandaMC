@@ -1,9 +1,6 @@
-"""This document contains a flow to upload data to a database"""
-
-from prefect import flow
+from prefect import flow, task
 import pandas as pd
 from sqlalchemy import create_engine
-
 
 @flow(
     name="Upload df to {schema}.{table_name}",
@@ -35,6 +32,7 @@ def upload_data_to_database(
     engine = create_engine(
         f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     )
+
     df.to_sql(
         name=table_name, con=engine, schema=schema, if_exists="append", index=False
     )

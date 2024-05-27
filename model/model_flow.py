@@ -14,12 +14,11 @@ from optuna.samplers import TPESampler
 from optuna.pruners import WilcoxonPruner
 from mlflow.tracking import MlflowClient
 from mlflow.models.signature import infer_signature
-from keras.optimizers import Adam
-from keras.models import Sequential
-from keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 
 OPTUNA_URI = "sqlite:///optuna_lstm.db"
-MLFLOW_URI = "sqlite:///mlflow_db"
 
 @task(
     name="Get Data From Database",
@@ -113,8 +112,8 @@ def train_model(
     x_val, y_val = create_sequences(validation, seq_length)
     x_tst, y_tst = create_sequences(test, seq_length)
 
-    # Making this a task would cause too much clutter and lag in
-    # prefect I know from experience
+    n_features = 1  # Number of features, e.g., 1 for univariate time series
+
     def objective(trial: optuna.trial.Trial) -> Tuple[float, float]:
         """
         Objective function for Optuna hyperparameter optimization.
@@ -134,11 +133,7 @@ def train_model(
 
         model = Sequential(
             [
-                LSTM(
-                    n_units_1,
-                    return_sequences=True,
-                    input_shape=(x_trn.shape[1], x_trn.shape[2]),
-                ),
+                LSTM(n_units_1, return_sequences=True, input_shape=(seq_length, n_features)),
                 Dropout(dropout_rate_1),
                 LSTM(n_units_2),
                 Dropout(dropout_rate_2),
@@ -155,25 +150,25 @@ def train_model(
         model.fit(
             x_trn,
             y_trn,
-            epochs=5,
+            epochs=10,
             batch_size=batch_size,
             validation_split=0.2,
             verbose=0,
         )
 
-        loss, accuracy = model.evaluate(x_val, y_val, verbose=0)
-        return loss, accuracy
+        loss, _ = model.evaluate(x_val, y_val)
+        return loss
 
     sampler = TPESampler(seed=42, n_startup_trials=25)
     pruner = WilcoxonPruner(p_threshold=0.12, n_startup_steps=25)
     study = optuna.create_study(
-        directions=["minimize", "maximize"],
+        direction="minimize",
         storage=OPTUNA_URI,
         load_if_exists=True,
         sampler=sampler,
         pruner=pruner,
     )
-    study.optimize(objective, n_trials=250)
+    study.optimize(objective, n_trials=30)
     best_params = study.best_params
 
     final_model = Sequential(
@@ -181,7 +176,7 @@ def train_model(
             LSTM(
                 best_params["n_units_1"],
                 return_sequences=True,
-                input_shape=(x_trn.shape[1], x_trn.shape[2]),
+                input_shape=(seq_length, n_features),
             ),
             Dropout(best_params["dropout_rate_1"]),
             LSTM(best_params["n_units_2"]),
@@ -204,7 +199,6 @@ def train_model(
         validation_data=(x_tst, y_tst),
     )
 
-    mlflow.set_tracking_uri(MLFLOW_URI)
 
     with mlflow.start_run() as run:
         mlflow.keras.log_model(
@@ -243,8 +237,8 @@ def model_flow(
 ):
     """Main Flow - Model Training"""
     trn_set = get_data_from_database(
-        schema="training",
-        table_name="training_data",
+        schema="mlops",
+        table_name="trainingdata",
         db_user=pstgrs_user,
         db_password=pstgrs_password,
         db_name=pstgrs_name,
@@ -253,8 +247,8 @@ def model_flow(
     )
 
     val_set = get_data_from_database(
-        schema="validation",
-        table_name="validation_data",
+        schema="mlops",
+        table_name="validationdata",
         db_user=pstgrs_user,
         db_password=pstgrs_password,
         db_name=pstgrs_name,
@@ -263,8 +257,8 @@ def model_flow(
     )
 
     tst_set = get_data_from_database(
-        schema="testing",
-        table_name="testing_data",
+        schema="mlops",
+        table_name="testingdata",
         db_user=pstgrs_user,
         db_password=pstgrs_password,
         db_name=pstgrs_name,
