@@ -30,7 +30,7 @@ def data_gathering_flow(
     trn_range: Dict[str, str],
     val_range: Dict[str, str],
     tst_range: Dict[str, str],
-    intrval: Dict[str, Any],
+    intrval: str,
     crypto_c: str,
     user: str,
     pasw: str,
@@ -45,7 +45,7 @@ def data_gathering_flow(
     def training_data_gathering_flow(
         start_d: str,
         end_d: str,
-        intrvl: Dict[str, Any],
+        intrvl: str,
         coin: str,
         usr: str,
         pwd: str,
@@ -74,7 +74,7 @@ def data_gathering_flow(
     def validation_data_gathering_flow(
         start_d: str,
         end_d: str,
-        intrvl: Dict[str, Any],
+        intrvl: str,
         coin: str,
         usr: str,
         pwd: str,
@@ -103,7 +103,7 @@ def data_gathering_flow(
     def test_data_gathering_flow(
         start_d: str,
         end_d: str,
-        intrvl: Dict[str, Any],
+        intrvl: str,
         coin: str,
         usr: str,
         pwd: str,
@@ -132,7 +132,7 @@ def data_gathering_flow(
     def recent_data_gathering_flow(
         start_d: str,
         end_d: str,
-        intrvl: Dict[str, Any],
+        intrvl: str,
         coin: str,
         usr: str,
         pwd: str,
@@ -265,3 +265,6 @@ def main_flow() -> None:
         postgres_port,
         postgres_db,
     )
+
+if __name__ == "__main__":
+    main_flow()

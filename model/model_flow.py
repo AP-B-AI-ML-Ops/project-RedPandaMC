@@ -229,7 +229,7 @@ def train_model(
         )
 
 
-@flow("Main Flow - Model Training")
+@flow(name="Main Flow - Model Training")
 def model_flow(
     sequence_length,
     train_range,

@@ -20,12 +20,12 @@ services:
         target: /workspaces
         bind:
           propagation: shared
-    networks:
-      - mynetwork
     ports:
       - "4200:4200"
       - "5000:5000"
       - "8080:8080"
+    networks:
+      - mynetwork
 
   postgres:
     image: postgres:latest
