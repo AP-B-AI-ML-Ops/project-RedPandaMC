@@ -36,14 +36,6 @@ def get_data_from_database(
     return df
 
 @task()
-def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
-    cursor.execute('SELECT MAX("Date") FROM mlops.recentdata')
-    result = cursor.fetchone()
-    if result:
-        return result[0]
-    return None
-
-@task()
 def generate_future_dates(
     last_date: datetime, interval: str, num_values: int
 ) -> List[datetime]:
@@ -54,13 +46,7 @@ def generate_future_dates(
         future_dates.append(current_date)
     return future_dates
 
-@task()
-def insert_predicted_data(
-    cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
-) -> None:
-    insert_query = 'INSERT INTO mlops.predicteddata ("PriceUSD", "FutureDate") VALUES (%s, %s)'
-    for date in future_dates:
-        cursor.execute(insert_query, (None, date))
+
 
 @task()
 def upload_prediction_to_database(
@@ -102,12 +88,27 @@ def prepare_future_prices_to_database(
 
     conn = None
     cursor = None
+
+    @task()
+    def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
+        cursor.execute('SELECT MAX("Time") FROM mlops.recentdata')
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
+
+    @task()
+    def insert_predicted_data(
+            cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
+    ) -> None:
+        insert_query = 'INSERT INTO mlops.predicteddata ("PriceUSD", "Time") VALUES (%s, %s)'
+        for date in future_dates:
+            cursor.execute(insert_query, (None, date))
+
     try:
         conn = psycopg2.connect(**db_params)
         cursor = conn.cursor()
         last_date = get_last_date(cursor)
-        if last_date is None:
-            raise ValueError("No last date found in the database.")
         future_dates = generate_future_dates(last_date, interval, num_values)
         insert_predicted_data(cursor, future_dates)
         conn.commit()
@@ -178,8 +179,6 @@ def predict_future_prices(
             db_name,
         )
 
-        pred_df.columns = ["PriceUSD", "Date"]
-
         combined_data = pd.concat([recent_df, pred_df], ignore_index=True)
 
         if not combined_data["PriceUSD"].isna().any():
@@ -198,7 +197,6 @@ def predict_future_prices(
         combined_data.at[first_nan_index, "PriceUSD"] = prediction[0]
 
         updated_pred_df = combined_data[combined_data["Date"] > last_date]
-        updated_pred_df.columns = ["PriceUSDPredicted", "FutureDate"]
 
         upload_prediction_to_database(
             updated_pred_df, db_user, db_password, db_host, db_port, db_name

@@ -27,7 +27,7 @@ def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
     Returns:
     Optional[datetime]: The last date in the recent data table.
     """
-    cursor.execute('SELECT MAX("Date") FROM mlops.data')
+    cursor.execute('SELECT MAX("Date") FROM mlops.recentdata')
     return cursor.fetchone()[0]
 
 
@@ -63,8 +63,7 @@ def insert_predicted_data(
     cursor (psycopg2.extensions.cursor): The database cursor.
     future_dates (List[datetime]): The future dates to insert into the prediction table.
     """
-    insert_query = 'INSERT INTO prediction.predicted_data \
-        ("PriceUSDPredicted", "FutureDate") VALUES (%s, %s)'
+    insert_query = 'INSERT INTO mlops.predicteddata ("PriceUSD", "Time") VALUES (%s, %s)'
     for date in future_dates:
         cursor.execute(insert_query, (None, date))
 
