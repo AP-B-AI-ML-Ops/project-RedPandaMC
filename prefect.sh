@@ -1,5 +1,9 @@
 #!/bin/bash
 
+touch mlflow.db && \
+
+touch optuna_lstm.db && \
+
 prefect init --recipe local && \
 
 prefect worker start -t process -p main_pool &
