@@ -16,9 +16,11 @@ from mlflow.tracking import MlflowClient
 from mlflow.models.signature import infer_signature
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Input
+import datetime
 
 OPTUNA_URI = "sqlite:///optuna_lstm.db"
+MLFLOW_URI = "sqlite:///mlflow.db"
 
 @task(
     name="Get Data From Database",
@@ -114,7 +116,7 @@ def train_model(
 
     n_features = 1  # Number of features, e.g., 1 for univariate time series
 
-    def objective(trial: optuna.trial.Trial) -> Tuple[float, float]:
+    def objective(trial: optuna.trial.Trial) -> Tuple[float, float, float]:
         """
         Objective function for Optuna hyperparameter optimization.
 
@@ -124,16 +126,17 @@ def train_model(
         Returns:
             Tuple[float, float]: Loss and accuracy on the validation set.
         """
-        n_units_1 = trial.suggest_int("n_units_1", 50, 200)
-        n_units_2 = trial.suggest_int("n_units_2", 50, 200)
-        dropout_rate_1 = trial.suggest_float("dropout_rate_1", 0.2, 0.5)
-        dropout_rate_2 = trial.suggest_float("dropout_rate_2", 0.2, 0.5)
-        learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-2)
-        batch_size = trial.suggest_int("batch_size", 16, 128)
+        n_units_1 = trial.suggest_int("n_units_1", 50, 250)
+        n_units_2 = trial.suggest_int("n_units_2", 50, 250)
+        dropout_rate_1 = trial.suggest_float("dropout_rate_1", 0.1, 0.5)
+        dropout_rate_2 = trial.suggest_float("dropout_rate_2", 0.1, 0.5)
+        learning_rate = trial.suggest_float("learning_rate", 1e-6, 1e-1, log=True)
+        batch_size = trial.suggest_int("batch_size", 16, 256, step=8)
 
         model = Sequential(
             [
-                LSTM(n_units_1, return_sequences=True, input_shape=(seq_length, n_features)),
+                Input(shape=(seq_length, n_features)),
+                LSTM(n_units_1, return_sequences=True),
                 Dropout(dropout_rate_1),
                 LSTM(n_units_2),
                 Dropout(dropout_rate_2),
@@ -142,41 +145,47 @@ def train_model(
             ]
         )
 
-        optimizer = Adam(learning_rate=learning_rate)
+        opt = Adam(learning_rate=learning_rate)
         model.compile(
-            optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
+            optimizer=opt, loss="mean_squared_error", metrics=["mae"]
         )
 
+        # Train the model
         model.fit(
             x_trn,
             y_trn,
-            epochs=10,
+            epochs=7,
             batch_size=batch_size,
-            validation_split=0.2,
-            verbose=0,
+            validation_split=0.25,
+            verbose=0
         )
 
-        loss, _ = model.evaluate(x_val, y_val)
-        return loss
+        l, m = model.evaluate(x_val, y_val)
+        return l, m
 
-    sampler = TPESampler(seed=42, n_startup_trials=25)
-    pruner = WilcoxonPruner(p_threshold=0.12, n_startup_steps=25)
+    mlflow.set_tracking_uri(MLFLOW_URI)
+
+    sampler = TPESampler(seed=42)
+    pruner = WilcoxonPruner(p_threshold=0.25)
+
     study = optuna.create_study(
-        direction="minimize",
+        directions=["minimize","minimize"],
         storage=OPTUNA_URI,
         load_if_exists=True,
         sampler=sampler,
         pruner=pruner,
     )
-    study.optimize(objective, n_trials=30)
-    best_params = study.best_params
+
+    study.optimize(objective, n_trials=125)
+    best_trial = study.best_trials[-1]
+    best_params = best_trial.params
 
     final_model = Sequential(
         [
+            Input(shape=(seq_length, n_features)),
             LSTM(
                 best_params["n_units_1"],
-                return_sequences=True,
-                input_shape=(seq_length, n_features),
+                return_sequences=True
             ),
             Dropout(best_params["dropout_rate_1"]),
             LSTM(best_params["n_units_2"]),
@@ -188,7 +197,7 @@ def train_model(
 
     optimizer = Adam(learning_rate=best_params["learning_rate"])
     final_model.compile(
-        optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
+        optimizer=optimizer, loss="mean_squared_error", metrics=["mae"]
     )
 
     final_model.fit(
@@ -197,31 +206,46 @@ def train_model(
         epochs=15,
         batch_size=best_params["batch_size"],
         validation_data=(x_tst, y_tst),
+        verbose = 0
     )
 
+    loss, mae = final_model.evaluate(x_tst, y_tst)
+
+    experiment_name = f"CryptoModelTracking-{datetime.datetime.now().strftime('%H:%M:%S %d:%m:%Y')}"
+
+    client = MlflowClient(tracking_uri=MLFLOW_URI)
+    if experiment_name not in [exp.name for exp in client.search_experiments()]:
+        mlflow.create_experiment(experiment_name)
+    mlflow.set_experiment(experiment_name)
 
     with mlflow.start_run() as run:
-        mlflow.keras.log_model(
-            final_model, "model", signature=infer_signature(x_trn, y_trn)
-        )
-        mlflow.log_params(best_params)
-        mlflow.log_params(
-            {
+        try:
+            mlflow.set_tag("developer", "red panda 🕊️")
+
+            mlflow.keras.log_model(
+                final_model, "model", signature=infer_signature(x_trn, y_trn)
+            )
+
+            mlflow.log_params(best_params)
+            mlflow.log_params({
                 "training_set_date_range": train_date_range,
                 "validation_set_date_range": val_date_range,
-                "test_set_date_range": test_date_range,
-            }
-        )
-        model_uri = f"runs:/{run.info.run_id}/model"
-        client = MlflowClient()
-        client.create_registered_model("CryptoPredictor")
-        model_version = client.create_model_version(
-            name="CryptoPredictor", source=model_uri, run_id=run.info.run_id
-        )
-        client.set_registered_model_alias(
-            name="CryptoPredictor", alias="Production", version=model_version.version
-        )
+                "test_date_range": test_date_range
+            })
+            mlflow.log_params({
+                "LOSS": loss,
+                "MAE": mae
+            })
 
+            model_uri = f"runs:/{run.info.run_id}/model"
+            mlflow.register_model(model_uri, "CryptoModel")
+            latest_model_version = client.get_latest_versions("CryptoModel", stages=['None'])
+            latest_version_number = latest_model_version[0].version if latest_model_version else None
+            client.set_registered_model_alias("CryptoModel", "Production", latest_version_number)
+
+        except Exception as e:
+            mlflow.log_param("error", str(e))
+            raise
 
 @flow(name="Main Flow - Model Training")
 def model_flow(

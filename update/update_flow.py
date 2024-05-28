@@ -27,7 +27,7 @@ def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
     Returns:
     Optional[datetime]: The last date in the recent data table.
     """
-    cursor.execute('SELECT MAX("Date") FROM recent.recent_data')
+    cursor.execute('SELECT MAX("Date") FROM mlops.data')
     return cursor.fetchone()[0]
 
 

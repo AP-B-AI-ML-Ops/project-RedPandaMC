@@ -6,9 +6,11 @@ prefect worker start -t process -p main_pool &
 
 prefect --no-prompt deploy main_flow.py:main_flow -p main_pool -n Setup && \
 
-prefect server start
+prefect --no-prompt deploy production_flow.py:production_main -p main_pool -n Production && \
 
-mlflow ui --backend-store-uri sqlite:///mlflow_db &
+prefect server start &
+
+mlflow ui --backend-store-uri sqlite:///mlflow.db &
 
 optuna-dashboard sqlite:///optuna_lstm.db &
 

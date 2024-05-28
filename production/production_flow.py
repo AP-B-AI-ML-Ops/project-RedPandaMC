@@ -1,17 +1,11 @@
-"""
-In this document you'll find everything 
-needed to use the model to forecast data based on recent data
-"""
 from typing import Any, List, Optional
 from datetime import datetime, timedelta
 from mlflow.tracking import MlflowClient
 from sqlalchemy import create_engine
+from prefect import task, flow
 import mlflow
 import pandas as pd
 import psycopg2
-
-
-
 
 INTERVAL_MAP = {
     "m1": timedelta(minutes=1),
@@ -25,7 +19,7 @@ INTERVAL_MAP = {
     "d1": timedelta(days=1),
 }
 
-
+@task()
 def get_data_from_database(
     schema: str,
     table_name: str,
@@ -35,57 +29,24 @@ def get_data_from_database(
     db_port: int,
     db_name: str,
 ) -> pd.DataFrame:
-    """
-    Fetch data from a database table and return it as a pandas DataFrame.
-
-    Parameters:
-    schema (str): The schema name.
-    table_name (str): The table name.
-    db_user (str): The database user.
-    db_password (str): The database password.
-    db_host (str): The database host.
-    db_port (int): The database port.
-    db_name (str): The database name.
-
-    Returns:
-    pd.DataFrame: The data from the specified table.
-    """
     db_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     engine = create_engine(db_url)
     query = f"SELECT * FROM {schema}.{table_name}"
     df = pd.read_sql_query(query, con=engine)
-
     return df
 
-
+@task()
 def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
-    """
-    Fetch the last date from the recent data table.
+    cursor.execute('SELECT MAX("Date") FROM mlops.recentdata')
+    result = cursor.fetchone()
+    if result:
+        return result[0]
+    return None
 
-    Parameters:
-    cursor (psycopg2.extensions.cursor): The database cursor.
-
-    Returns:
-    Optional[datetime]: The last date in the recent data table.
-    """
-    cursor.execute('SELECT MAX("Date") FROM recent.recent_data')
-    return cursor.fetchone()[0]
-
-
+@task()
 def generate_future_dates(
     last_date: datetime, interval: str, num_values: int
 ) -> List[datetime]:
-    """
-    Generate future dates based on the given interval and number of values.
-
-    Parameters:
-    last_date (datetime): The last date from which to start generating future dates.
-    interval (str): The interval for generating dates.
-    num_values (int): The number of future dates to generate.
-
-    Returns:
-    List[datetime]: A list of future dates.
-    """
     future_dates = []
     current_date = last_date
     for _ in range(num_values):
@@ -93,24 +54,16 @@ def generate_future_dates(
         future_dates.append(current_date)
     return future_dates
 
-
+@task()
 def insert_predicted_data(
     cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
 ) -> None:
-    """
-    Insert predicted data into the prediction table.
-
-    Parameters:
-    cursor (psycopg2.extensions.cursor): The database cursor.
-    future_dates (List[datetime]): The future dates to insert 
-    into the prediction table.
-    """
-    insert_query = 'INSERT INTO prediction.predicted_data \
+    insert_query = 'INSERT INTO mlops.predicteddata \
     ("PriceUSDPredicted", "FutureDate") VALUES (%s, %s)'
     for date in future_dates:
         cursor.execute(insert_query, (None, date))
 
-
+@task()
 def upload_prediction_to_database(
     df: pd.DataFrame,
     db_user: str,
@@ -119,29 +72,18 @@ def upload_prediction_to_database(
     db_port: int,
     db_name: str,
 ) -> None:
-    """
-    Upload a DataFrame to a specified schema in a PostgreSQL database.
-
-    Parameters:
-    df (pd.DataFrame): The DataFrame to upload.
-    db_user (str): Database username.
-    db_password (str): Database password.
-    db_host (str): Database host.
-    db_port (int): Database port.
-    db_name (str): Database name.
-    """
     engine = create_engine(
         f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     )
     df.to_sql(
-        name="predicted_data",
+        name="predicteddata",
         con=engine,
-        schema="prediction",
+        schema="mlops",
         if_exists="replace",
         index=False,
     )
 
-
+@task()
 def prepare_future_prices_to_database(
     num_values: int,
     interval: str,
@@ -151,20 +93,8 @@ def prepare_future_prices_to_database(
     db_port: int,
     db_name: str,
 ) -> None:
-    """
-    Prepare future prices and insert them into the database.
-
-    Parameters:
-    num_values (int): The number of future values to generate.
-    interval (str): The interval for generating future dates.
-    db_user (str): The database user.
-    db_password (str): The database password.
-    db_host (str): The database host.
-    db_port (int): The database port.
-    db_name (str): The database name.
-    """
     db_params = {
-        "dbname": db_name,
+        "database": db_name,
         "user": db_user,
         "password": db_password,
         "host": db_host,
@@ -177,6 +107,8 @@ def prepare_future_prices_to_database(
         conn = psycopg2.connect(**db_params)
         cursor = conn.cursor()
         last_date = get_last_date(cursor)
+        if last_date is None:
+            raise ValueError("No last date found in the database.")
         future_dates = generate_future_dates(last_date, interval, num_values)
         insert_predicted_data(cursor, future_dates)
         conn.commit()
@@ -190,7 +122,7 @@ def prepare_future_prices_to_database(
         if conn:
             conn.close()
 
-
+@task()
 def get_production_model() -> Any:
     """
     Fetch the production model from MLflow.
@@ -208,7 +140,7 @@ def get_production_model() -> Any:
 
     return model
 
-
+@flow()
 def predict_future_prices(
     model: Any,
     seq_length: int,
@@ -231,15 +163,15 @@ def predict_future_prices(
     db_name (str): The database name.
     """
     recent_df = get_data_from_database(
-        "recent", "recent_data", db_user, db_password, db_host, db_port, db_name
+        "mlops", "recentdata", db_user, db_password, db_host, db_port, db_name
     )
 
     last_date = recent_df.iloc[-1]["Date"]
 
     while True:
         pred_df = get_data_from_database(
-            "prediction",
-            "predicted_data",
+            "mlops",
+            "predicteddata",
             db_user,
             db_password,
             db_host,
