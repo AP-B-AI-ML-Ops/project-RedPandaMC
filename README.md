@@ -4,7 +4,8 @@
 This project doesn't seem to work why? Well, the model training and data gathering works. 
 The problem is just that the production side, which is used to predict future crypto prices, 
 doesn't work and keeps crashing for reasons I cannot find. If i had more time i'd rewrite this code 
-but the deadline is on 28/05/2024. I will add unit tests for the parts that do work. 
+but the deadline is on 28/05/2024. I will add unit tests for the parts that do work. Added precommit 
+hook aswell.
 
 ## Overview
 This project aims to utilize the [CoinCap API](https://docs.coincap.io/) to forecast the prices of cryptocurrencies, such as Bitcoin. The process involves normalizing the data using Prefect flows and tasks, automating the workflow with Prefect's scheduling feature, and experimenting with MLflow to identify the optimal model for forecasting.
