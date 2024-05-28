@@ -5,18 +5,21 @@ for the different deployments for this project
 
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Any, Dict
+
 import yaml
 from dotenv import load_dotenv
 from prefect import flow, task
-from data.prepare_db_flow import prepare_database
-from data.download_data_from_coincap_flow import get_crypto_data_flow
+
 from data.api_data_to_df_flow import api_data_to_df
 from data.clean_data_flow import clean_data
+from data.download_data_from_coincap_flow import get_crypto_data_flow
+from data.prepare_db_flow import prepare_database
 from data.upload_data_to_db_flow import upload_data_to_database
 from model.model_flow import model_flow
 
 CONFIG_FILE_PATH = "cryptopredictor_config.yml"
+
 
 @task()
 def read_config(file_path: str) -> Dict[str, Any]:
@@ -24,6 +27,7 @@ def read_config(file_path: str) -> Dict[str, Any]:
     with open(file_path, "r", encoding="utf-8") as file:
         conf = yaml.safe_load(file)
     return conf
+
 
 @flow(name="Main Flow - Data Gathering Flow")
 def data_gathering_flow(
@@ -217,6 +221,7 @@ def data_gathering_flow(
         hst=host,
     )
 
+
 @flow()
 def main_flow() -> None:
     """Main flow entry point."""
@@ -265,6 +270,7 @@ def main_flow() -> None:
         postgres_port,
         postgres_db,
     )
+
 
 if __name__ == "__main__":
     main_flow()

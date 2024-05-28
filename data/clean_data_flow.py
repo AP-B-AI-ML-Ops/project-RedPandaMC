@@ -2,8 +2,8 @@
 This document contains a flow to clean a given pandas dataframe
 """
 
-from prefect import flow
 import pandas as pd
+from prefect import flow
 
 
 @flow(name="Clean data flow", description="Cleans and rename columns in the DataFrame.")

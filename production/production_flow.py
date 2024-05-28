@@ -1,11 +1,12 @@
-from typing import Any, List, Optional
 from datetime import datetime, timedelta
-from mlflow.tracking import MlflowClient
-from sqlalchemy import create_engine
-from prefect import task, flow
+from typing import Any, List, Optional
+
 import mlflow
 import pandas as pd
 import psycopg2
+from mlflow.tracking import MlflowClient
+from prefect import flow, task
+from sqlalchemy import create_engine
 
 INTERVAL_MAP = {
     "m1": timedelta(minutes=1),
@@ -18,6 +19,7 @@ INTERVAL_MAP = {
     "h12": timedelta(hours=12),
     "d1": timedelta(days=1),
 }
+
 
 @task()
 def get_data_from_database(
@@ -35,17 +37,15 @@ def get_data_from_database(
     df = pd.read_sql_query(query, con=engine)
     return df
 
+
 @task()
-def generate_future_dates(
-    last_date: datetime, interval: str, num_values: int
-) -> List[datetime]:
+def generate_future_dates(last_date: datetime, interval: str, num_values: int) -> List[datetime]:
     future_dates = []
     current_date = last_date
     for _ in range(num_values):
         current_date += INTERVAL_MAP[interval]
         future_dates.append(current_date)
     return future_dates
-
 
 
 @task()
@@ -57,9 +57,7 @@ def upload_prediction_to_database(
     db_port: int,
     db_name: str,
 ) -> None:
-    engine = create_engine(
-        f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    )
+    engine = create_engine(f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
     df.to_sql(
         name="predicteddata",
         con=engine,
@@ -67,6 +65,7 @@ def upload_prediction_to_database(
         if_exists="replace",
         index=False,
     )
+
 
 @flow()
 def prepare_future_prices_to_database(
@@ -99,7 +98,7 @@ def prepare_future_prices_to_database(
 
     @task()
     def insert_predicted_data(
-            cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
+        cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
     ) -> None:
         insert_query = 'INSERT INTO mlops.predicteddata ("PriceUSD", "Time") VALUES (%s, %s)'
         for date in future_dates:
@@ -122,6 +121,7 @@ def prepare_future_prices_to_database(
         if conn:
             conn.close()
 
+
 @task()
 def get_production_model() -> Any:
     """
@@ -139,6 +139,7 @@ def get_production_model() -> Any:
     model = mlflow.pyfunc.load_model(model_uri)
 
     return model
+
 
 @flow()
 def predict_future_prices(

@@ -4,9 +4,9 @@ used to monitor the models performance
 """
 
 import pandas as pd
-from sqlalchemy import create_engine
 from evidently.metric_preset import DataDriftPreset
 from evidently.report import Report
+from sqlalchemy import create_engine
 
 
 def get_data_from_database(

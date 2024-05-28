@@ -1,6 +1,7 @@
-from prefect import flow, task
 import pandas as pd
+from prefect import flow, task
 from sqlalchemy import create_engine
+
 
 @flow(
     name="Upload df to {schema}.{table_name}",
@@ -29,10 +30,6 @@ def upload_data_to_database(
     db_port (int): Database port.
     db_name (str): Database name.
     """
-    engine = create_engine(
-        f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    )
+    engine = create_engine(f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}")
 
-    df.to_sql(
-        name=table_name, con=engine, schema=schema, if_exists="append", index=False
-    )
+    df.to_sql(name=table_name, con=engine, schema=schema, if_exists="append", index=False)

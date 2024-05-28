@@ -3,8 +3,9 @@ This document contains a flow to execute a given sql file
 """
 
 import os
+
 from prefect import flow
-from psycopg2 import connect, Error
+from psycopg2 import Error, connect
 
 
 @flow(

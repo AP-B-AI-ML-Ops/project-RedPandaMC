@@ -4,9 +4,10 @@ cryptocurrency from the CoinCap API.
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any
-from prefect import flow, task
+from typing import Any, Dict, Optional
+
 import requests
+from prefect import flow, task
 
 
 @flow(
@@ -42,18 +43,14 @@ def get_crypto_data_flow(
         description="Send a GET request to the specified URL with \
         provided parameters, headers, and data.",
     )
-    def get_data(
-        url: str, params: dict, headers: dict, data: dict
-    ) -> requests.Response:
+    def get_data(url: str, params: dict, headers: dict, data: dict) -> requests.Response:
         """Send a GET request to the specified URL with provided parameters, headers, and data."""
         resp: requests.Response = requests.get(
             url, params=params, headers=headers, data=data, timeout=10
         )
         return resp
 
-    start_timestamp: int = (
-        int(datetime.strptime(start_date, "%d/%m/%Y").timestamp()) * 1000
-    )
+    start_timestamp: int = int(datetime.strptime(start_date, "%d/%m/%Y").timestamp()) * 1000
     end_timestamp: int = int(datetime.strptime(end_date, "%d/%m/%Y").timestamp()) * 1000
 
     url: str = f"https://api.coincap.io/v2/assets/{crypto_coin}/history?"

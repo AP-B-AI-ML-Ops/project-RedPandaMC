@@ -1,11 +1,15 @@
-from prefect import flow, task
-from typing import Dict, Any
+import os
+from typing import Any, Dict
+
 import yaml
 from dotenv import load_dotenv
-from production.production_flow import prepare_future_prices_to_database,get_production_model,predict_future_prices
-import os
+from prefect import flow, task
+
+from production.production_flow import (get_production_model, predict_future_prices,
+                                        prepare_future_prices_to_database)
 
 CONFIG_FILE_PATH = "cryptopredictor_config.yml"
+
 
 @task()
 def read_config(file_path: str) -> Dict[str, Any]:
@@ -13,6 +17,8 @@ def read_config(file_path: str) -> Dict[str, Any]:
     with open(file_path, "r", encoding="utf-8") as file:
         conf = yaml.safe_load(file)
     return conf
+
+
 @flow()
 def production_main():
     config = read_config(CONFIG_FILE_PATH)
@@ -31,24 +37,27 @@ def production_main():
     postgres_port = os.environ.get("POSTGRES_PORT")
     postgres_host = os.environ.get("POSTGRES_HOST")
 
-    prepare_future_prices_to_database(num_values=num_values,
-                                      interval=interval['type'],
-                                      db_user=postgres_user,
-                                      db_password=postgres_password,
-                                      db_host=postgres_host,
-                                      db_port=postgres_port,
-                                      db_name=postgres_db)
+    prepare_future_prices_to_database(
+        num_values=num_values,
+        interval=interval["type"],
+        db_user=postgres_user,
+        db_password=postgres_password,
+        db_host=postgres_host,
+        db_port=postgres_port,
+        db_name=postgres_db,
+    )
 
     model = get_production_model()
 
     predict_future_prices(
-                    model=model,
-                    seq_length=sequence_length,
-                    db_user=postgres_user,
-                    db_password=postgres_password,
-                    db_host=postgres_host,
-                    db_port=postgres_port,
-                    db_name=postgres_db)
+        model=model,
+        seq_length=sequence_length,
+        db_user=postgres_user,
+        db_password=postgres_password,
+        db_host=postgres_host,
+        db_port=postgres_port,
+        db_name=postgres_db,
+    )
 
 
 if __name__ == "__main__":

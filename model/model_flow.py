@@ -2,25 +2,27 @@
 Everything model related happens in this doc
 """
 
-from typing import Tuple
-import pandas as pd
-import optuna
-import numpy as np
-import mlflow.keras
-import mlflow
-from sqlalchemy import create_engine
-from prefect import task, flow
-from optuna.samplers import TPESampler
-from optuna.pruners import WilcoxonPruner
-from mlflow.tracking import MlflowClient
-from mlflow.models.signature import infer_signature
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Input
 import datetime
+from typing import Tuple
+
+import mlflow
+import mlflow.keras
+import numpy as np
+import optuna
+import pandas as pd
+from mlflow.models.signature import infer_signature
+from mlflow.tracking import MlflowClient
+from optuna.pruners import WilcoxonPruner
+from optuna.samplers import TPESampler
+from prefect import flow, task
+from sqlalchemy import create_engine
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Input
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
 
 OPTUNA_URI = "sqlite:///optuna_lstm.db"
 MLFLOW_URI = "sqlite:///mlflow.db"
+
 
 @task(
     name="Get Data From Database",
@@ -58,9 +60,7 @@ def get_data_from_database(
     return df
 
 
-def create_sequences(
-    data: np.ndarray, seq_length: int
-) -> Tuple[np.ndarray, np.ndarray]:
+def create_sequences(data: np.ndarray, seq_length: int) -> Tuple[np.ndarray, np.ndarray]:
     """
     Create sequences from data for time series forecasting.
 
@@ -146,9 +146,7 @@ def train_model(
         )
 
         opt = Adam(learning_rate=learning_rate)
-        model.compile(
-            optimizer=opt, loss="mean_squared_error", metrics=["mae"]
-        )
+        model.compile(optimizer=opt, loss="mean_squared_error", metrics=["mae"])
 
         # Train the model
         model.fit(
@@ -157,7 +155,7 @@ def train_model(
             epochs=7,
             batch_size=batch_size,
             validation_split=0.25,
-            verbose=0
+            verbose=0,
         )
 
         l, m = model.evaluate(x_val, y_val)
@@ -169,7 +167,7 @@ def train_model(
     pruner = WilcoxonPruner(p_threshold=0.25)
 
     study = optuna.create_study(
-        directions=["minimize","minimize"],
+        directions=["minimize", "minimize"],
         storage=OPTUNA_URI,
         load_if_exists=True,
         sampler=sampler,
@@ -183,10 +181,7 @@ def train_model(
     final_model = Sequential(
         [
             Input(shape=(seq_length, n_features)),
-            LSTM(
-                best_params["n_units_1"],
-                return_sequences=True
-            ),
+            LSTM(best_params["n_units_1"], return_sequences=True),
             Dropout(best_params["dropout_rate_1"]),
             LSTM(best_params["n_units_2"]),
             Dropout(best_params["dropout_rate_2"]),
@@ -196,9 +191,7 @@ def train_model(
     )
 
     optimizer = Adam(learning_rate=best_params["learning_rate"])
-    final_model.compile(
-        optimizer=optimizer, loss="mean_squared_error", metrics=["mae"]
-    )
+    final_model.compile(optimizer=optimizer, loss="mean_squared_error", metrics=["mae"])
 
     final_model.fit(
         x_trn,
@@ -206,7 +199,7 @@ def train_model(
         epochs=15,
         batch_size=best_params["batch_size"],
         validation_data=(x_tst, y_tst),
-        verbose = 0
+        verbose=0,
     )
 
     loss, mae = final_model.evaluate(x_tst, y_tst)
@@ -222,30 +215,30 @@ def train_model(
         try:
             mlflow.set_tag("developer", "red panda 🕊️")
 
-            mlflow.keras.log_model(
-                final_model, "model", signature=infer_signature(x_trn, y_trn)
-            )
+            mlflow.keras.log_model(final_model, "model", signature=infer_signature(x_trn, y_trn))
 
             mlflow.log_params(best_params)
-            mlflow.log_params({
-                "training_set_date_range": train_date_range,
-                "validation_set_date_range": val_date_range,
-                "test_date_range": test_date_range
-            })
-            mlflow.log_params({
-                "LOSS": loss,
-                "MAE": mae
-            })
+            mlflow.log_params(
+                {
+                    "training_set_date_range": train_date_range,
+                    "validation_set_date_range": val_date_range,
+                    "test_date_range": test_date_range,
+                }
+            )
+            mlflow.log_params({"LOSS": loss, "MAE": mae})
 
             model_uri = f"runs:/{run.info.run_id}/model"
             mlflow.register_model(model_uri, "CryptoModel")
-            latest_model_version = client.get_latest_versions("CryptoModel", stages=['None'])
-            latest_version_number = latest_model_version[0].version if latest_model_version else None
+            latest_model_version = client.get_latest_versions("CryptoModel", stages=["None"])
+            latest_version_number = (
+                latest_model_version[0].version if latest_model_version else None
+            )
             client.set_registered_model_alias("CryptoModel", "Production", latest_version_number)
 
         except Exception as e:
             mlflow.log_param("error", str(e))
             raise
+
 
 @flow(name="Main Flow - Model Training")
 def model_flow(

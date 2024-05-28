@@ -1,8 +1,10 @@
 """
 Updates predicition database
 """
+
 from datetime import datetime, timedelta
 from typing import List, Optional
+
 import psycopg2
 
 INTERVAL_MAP = {
@@ -16,6 +18,7 @@ INTERVAL_MAP = {
     "h12": timedelta(hours=12),
     "d1": timedelta(days=1),
 }
+
 
 def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
     """
@@ -31,9 +34,7 @@ def get_last_date(cursor: psycopg2.extensions.cursor) -> Optional[datetime]:
     return cursor.fetchone()[0]
 
 
-def generate_future_dates(
-    last_date: datetime, interval: str, num_values: int
-) -> List[datetime]:
+def generate_future_dates(last_date: datetime, interval: str, num_values: int) -> List[datetime]:
     """
     Generate future dates based on the given interval and number of values.
 
@@ -53,9 +54,7 @@ def generate_future_dates(
     return future_dates
 
 
-def insert_predicted_data(
-    cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
-) -> None:
+def insert_predicted_data(cursor: psycopg2.extensions.cursor, future_dates: List[datetime]) -> None:
     """
     Insert predicted data into the prediction table.
 

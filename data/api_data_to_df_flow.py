@@ -4,6 +4,7 @@ This document contains a flow to convert coincap api data to a pandas dataframe
 
 import json
 from typing import Any, Dict, List, Optional
+
 import pandas as pd
 from prefect import flow, task
 
