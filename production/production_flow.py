@@ -58,8 +58,7 @@ def generate_future_dates(
 def insert_predicted_data(
     cursor: psycopg2.extensions.cursor, future_dates: List[datetime]
 ) -> None:
-    insert_query = 'INSERT INTO mlops.predicteddata \
-    ("PriceUSDPredicted", "FutureDate") VALUES (%s, %s)'
+    insert_query = 'INSERT INTO mlops.predicteddata ("PriceUSD", "FutureDate") VALUES (%s, %s)'
     for date in future_dates:
         cursor.execute(insert_query, (None, date))
 
@@ -83,7 +82,7 @@ def upload_prediction_to_database(
         index=False,
     )
 
-@task()
+@flow()
 def prepare_future_prices_to_database(
     num_values: int,
     interval: str,

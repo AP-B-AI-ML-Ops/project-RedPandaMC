@@ -32,7 +32,7 @@ def production_main():
     postgres_host = os.environ.get("POSTGRES_HOST")
 
     prepare_future_prices_to_database(num_values=num_values,
-                                      interval=interval,
+                                      interval=interval['type'],
                                       db_user=postgres_user,
                                       db_password=postgres_password,
                                       db_host=postgres_host,
